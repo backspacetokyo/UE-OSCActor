@@ -4,13 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "OSCServer.h"
-#include "OSCAddress.h"
-#include "OSCMessage.h"
-#include "Components/InstancedStaticMeshComponent.h"
-#include "OSCActorServer.h"
-#include "OSCActorFunctionLibrary.h"
 #include "OSCActor.generated.h"
+
+class UInstancedStaticMeshComponent;
 
 USTRUCT()
 struct FChannelData
@@ -23,6 +19,8 @@ struct FChannelData
 UCLASS()
 class OSCACTOR_API AOSCActor : public AActor
 {
+	friend class UOSCActorSubsystem;
+	
 	GENERATED_BODY()
 	
 public:	
@@ -31,13 +29,13 @@ public:
 
 protected:
 
-	virtual void PostInitializeComponents() override;
-	virtual void BeginPlay() override;
+	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
+	virtual void Tick(float DeltaSeconds) override;
+	
+	UFUNCTION(BlueprintImplementableEvent, CallInEditor, Category = "OSCActor")
+	void UpdateFromOSC();
 
 public:	
-
-	UPROPERTY(Category = "OSCActor", EditAnywhere, BlueprintReadWrite)
-	TSoftObjectPtr<AOSCActorServer> OSCServer;
 
 	UPROPERTY(Category = "OSCActor", EditAnywhere, BlueprintReadWrite)
 	FString ObjectName;
@@ -55,23 +53,5 @@ private:
 
 	TMap<FString, float> Params;
 	TMap<FString, FChannelData> MultiSampleParams;
-	TMap<FString, FChannelData> MultiSampleParams_back;
 	int MultiSampleNum = 0;
-
-	FOSCDispatchMessageEventBP OnStateMessageReceivedEvent;
-	FOSCDispatchMessageEventBP OnTransformMessageReceivedEvent;
-	FOSCDispatchMessageEventBP OnParameterMessageReceivedEvent;
-	FOSCDispatchMessageEventBP OnMultiSampleParameterMessageReceivedEvent;
-
-	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	void OnStateMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port);
-
-	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	void OnTransformMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port);
-
-	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	void OnParameterMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port);
-
-	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	void OnMultiSampleParameterMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port);
 };

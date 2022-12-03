@@ -1,63 +1,18 @@
 #include "OSCActor.h"
 
-#include "OSCManager.h"
-#include "Engine/StreamableManager.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "OSCActorSubsystem.h"
 
 AOSCActor::AOSCActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-void AOSCActor::PostInitializeComponents()
+void AOSCActor::Tick(float DeltaSeconds)
 {
-	Super::PostInitializeComponents();
-
-
-}
-
-void AOSCActor::BeginPlay()
-{
-	Super::BeginPlay();
-
-	OnStateMessageReceivedEvent.Clear();
-	OnTransformMessageReceivedEvent.Clear();
-	OnParameterMessageReceivedEvent.Clear();
-	OnMultiSampleParameterMessageReceivedEvent.Clear();
-
-	AOSCActorServer* _OSCServer = OSCServer.LoadSynchronous();
-	if (_OSCServer != nullptr)
-	{
-		{
-			OnStateMessageReceivedEvent.BindUFunction(this, FName("OnStateMessageReceived"));
-			
-			 auto addr = FOSCAddress(FString::Format(TEXT("/state/{0}"), { *ObjectName }));
-			_OSCServer->OSCServer->BindEventToOnOSCAddressPatternMatchesPath(addr, OnStateMessageReceivedEvent);
-		}
-
-		{
-			OnTransformMessageReceivedEvent.BindUFunction(this, FName("OnTransformMessageReceived"));
-
-			auto addr = FOSCAddress(FString::Format(TEXT("/tr/{0}"), { *ObjectName }));
-			_OSCServer->OSCServer->BindEventToOnOSCAddressPatternMatchesPath(addr, OnTransformMessageReceivedEvent);
-		}
-
-		{
-			OnParameterMessageReceivedEvent.BindUFunction(this, FName("OnParameterMessageReceived"));
-
-			auto addr = FOSCAddress(FString::Format(TEXT("/ss/{0}/*"), { *ObjectName }));
-			_OSCServer->OSCServer->BindEventToOnOSCAddressPatternMatchesPath(addr, OnParameterMessageReceivedEvent);
-		}
-
-		{
-			OnMultiSampleParameterMessageReceivedEvent.BindUFunction(this, FName("OnMultiSampleParameterMessageReceived"));
-
-			auto addr = FOSCAddress(FString::Format(TEXT("/ms/{0}/*"), { *ObjectName }));
-			_OSCServer->OSCServer->BindEventToOnOSCAddressPatternMatchesPath(addr, OnMultiSampleParameterMessageReceivedEvent);
-		}
-	}
-	
-	Params.Reset();
-	MultiSampleParams.Reset();
+	Super::Tick(DeltaSeconds);
+	UOSCActorSubsystem* S = GEngine->GetEngineSubsystem<UOSCActorSubsystem>();
+	S->UpdateActorReference(this);
 }
 
 float AOSCActor::GetParam(const FString& k, float DefaultValue)
@@ -114,7 +69,7 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 		if (a.Num() != MultiSampleNum)
 		{
 			// UE_LOG(LogTemp, Log, TEXT("Invalid Channel Name: %s"), *InCustomDataChannels[i]);
-			return;
+			continue;
 		}
 
 		SrcCustomDataChannels.Add(a);
@@ -207,8 +162,10 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 			getSample(tz, i)
 		));
 
-
-		InstanceData[i].Transform = UOSCActorFunctionLibrary::ConvertGLtoUE4Matrix(T);
+		static const FMatrix ROT_YAW_90 = FRotationMatrix::Make(FRotator(0, -90, 0));
+		static const FMatrix ROT_YAW_90_T = FRotationMatrix::Make(FRotator(0, 90, 0));
+		
+		InstanceData[i].Transform = ROT_YAW_90_T * UOSCActorFunctionLibrary::ConvertGLtoUE4Matrix(T) * ROT_YAW_90;
 
 		for (int n = 0; n < InstancedStaticMesh->NumCustomDataFloats; n++)
 		{
@@ -222,86 +179,13 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 
 const TArray<float>& AOSCActor::GetMultiSampleParam(const FString& k)
 {
-	if (!MultiSampleParams.Contains(k))
+	auto Iter = MultiSampleParams.Find(k);
+	if (!Iter)
 	{
 		static const TArray<float> a;
 		return a;
 	}
 
-	const auto& s = MultiSampleParams[k];
+	const auto& s = *Iter;
 	return s.Samples;
-}
-
-void AOSCActor::OnStateMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port)
-{
-	if (!Message.GetPacket().IsValid())
-		return;
-
-	TArray<float> OutValues;
-	UOSCManager::GetAllFloats(Message, OutValues);
-
-	const float* a = OutValues.GetData();
-
-	const bool visible = a[0] > 0;
-
-	SetActorHiddenInGame(!visible);
-}
-
-void AOSCActor::OnTransformMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port)
-{
-	if (!Message.GetPacket().IsValid())
-		return;
-
-	TArray<float> OutValues;
-	UOSCManager::GetAllFloats(Message, OutValues);
-
-	const float* a = OutValues.GetData();
-	FMatrix M = UOSCActorFunctionLibrary::TRSToMatrix(
-		a[0], a[1], a[2],
-		a[3], a[4], a[5],
-		a[6], a[7], a[8]
-	);
-
-	M = UOSCActorFunctionLibrary::ConvertGLtoUE4Matrix(M);
-
-	SetActorTransform(FTransform(M));
-}
-
-void AOSCActor::OnParameterMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port)
-{
-	TArray<float> OutValues;
-	UOSCManager::GetAllFloats(Message, OutValues);
-
-	if (OutValues.Num() == 0)
-		return;
-
-	const auto& k = Message.GetAddress().GetMethod();
-	float v = OutValues.Last();
-
-	Params.Add(k, v);
-}
-
-void AOSCActor::OnMultiSampleParameterMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port)
-{
-	const auto& k = Message.GetAddress().GetMethod();
-
-	if (k == "frame_end")
-	{
-		MultiSampleParams = MultiSampleParams_back;
-		MultiSampleParams_back.Reset();
-
-		int n = 0;
-		UOSCManager::GetInt32(Message, 0, n);
-		MultiSampleNum = n;
-	}
-	else
-	{
-		FChannelData v;
-		UOSCManager::GetAllFloats(Message, v.Samples);
-
-		if (v.Samples.Num() == 0)
-			return;
-
-		MultiSampleParams_back.Add(k, v);
-	}
 }

@@ -6,9 +6,6 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "OSCActorFunctionLibrary.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class OSCACTOR_API UOSCActorFunctionLibrary : public UBlueprintFunctionLibrary
 {

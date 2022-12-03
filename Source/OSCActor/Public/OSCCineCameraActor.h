@@ -9,7 +9,6 @@
 #include "OSCServer.h"
 #include "OSCAddress.h"
 #include "OSCMessage.h"
-#include "OSCActorServer.h"
 #include "OSCActorFunctionLibrary.h"
 #include "OSCCineCameraActor.generated.h"
 
@@ -23,29 +22,15 @@ class OSCACTOR_API AOSCCineCameraActor : public ACineCameraActor
 
 protected:
 
-	virtual void PostInitializeComponents() override;
-	virtual void BeginPlay() override;
+	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
+	virtual void Tick(float DeltaSeconds) override;
 	
 public:
-	
-	UPROPERTY(Category = "OSCActor", EditAnywhere, BlueprintReadWrite)
-	TSoftObjectPtr<AOSCActorServer> OSCServer;
 
 	UPROPERTY(Category = "OSCActor", EditAnywhere, BlueprintReadWrite)
 	FString ObjectName;
 
 	UFUNCTION(BlueprintCallable, Category = "OSCActor")
 	void CopyCameraSettingToSceneCaptureComponent2D(USceneCaptureComponent2D* SceneCaptureComponent);
-
-protected:
-
-	FOSCDispatchMessageEventBP OnTransformMessageReceivedEvent;
-	FOSCDispatchMessageEventBP OnCameraMessageReceivedEvent;
-
-	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	void OnTransformMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port);
-
-	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	void OnCameraMessageReceived(const FOSCAddress& AddressPattern, const FOSCMessage& Message, const FString& IPAddress, int32 Port);
 
 };
