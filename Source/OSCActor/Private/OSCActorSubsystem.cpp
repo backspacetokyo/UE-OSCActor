@@ -77,6 +77,8 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 					continue;
 
 				AOSCActor* Actor = *It;
+				if (!IsValid(Actor))
+					continue;
 				
 				auto Type = Comp[2];
 
@@ -135,6 +137,8 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 					continue;
 
 				AOSCCineCameraActor* Camera = *It;
+				if (!IsValid(Camera))
+					continue;
 
 				auto Type = Comp[2];
 				
