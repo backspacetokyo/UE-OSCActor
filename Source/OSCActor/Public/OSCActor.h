@@ -41,10 +41,10 @@ public:
 	FString ObjectName;
 
 	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	float GetParam(const FString& k, float DefaultValue = 0);
+	float GetOSCParam(const FString& Key, float DefaultValue = 0);
 
 	UFUNCTION(BlueprintCallable, Category = "OSCActor")
-	const TArray<float>& GetMultiSampleParam(const FString& k);
+	const TArray<float>& GetOSCMultiSampleParam(const FString& Key);
 
 	UFUNCTION(BlueprintCallable, Category = "OSCActor")
 	void UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* InstancedStaticMesh, TArray<FString> InCustomDataChannels);

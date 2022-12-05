@@ -15,12 +15,25 @@ void AOSCActor::Tick(float DeltaSeconds)
 	S->UpdateActorReference(this);
 }
 
-float AOSCActor::GetParam(const FString& k, float DefaultValue)
+float AOSCActor::GetOSCParam(const FString& Key, float DefaultValue)
 {
-	if (!Params.Contains(k))
+	if (!Params.Contains(Key))
 		return DefaultValue;
 
-	return Params[k];
+	return Params[Key];
+}
+
+const TArray<float>& AOSCActor::GetOSCMultiSampleParam(const FString& Key)
+{
+	auto Iter = MultiSampleParams.Find(Key);
+	if (!Iter)
+	{
+		static const TArray<float> a;
+		return a;
+	}
+
+	const auto& s = *Iter;
+	return s.Samples;
 }
 
 static float getSample(const TArray<float>& c, int index, float default_value = 0)
@@ -33,38 +46,38 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 {
 	TArray<FInstancedStaticMeshInstanceData> InstanceData;
 
-	const TArray<float>& tx = GetMultiSampleParam("tx");
-	const TArray<float>& ty = GetMultiSampleParam("ty");
-	const TArray<float>& tz = GetMultiSampleParam("tz");
+	const TArray<float>& tx = GetOSCMultiSampleParam("tx");
+	const TArray<float>& ty = GetOSCMultiSampleParam("ty");
+	const TArray<float>& tz = GetOSCMultiSampleParam("tz");
 
-	const TArray<float>& rx = GetMultiSampleParam("rx");
-	const TArray<float>& ry = GetMultiSampleParam("ry");
-	const TArray<float>& rz = GetMultiSampleParam("rz");
+	const TArray<float>& rx = GetOSCMultiSampleParam("rx");
+	const TArray<float>& ry = GetOSCMultiSampleParam("ry");
+	const TArray<float>& rz = GetOSCMultiSampleParam("rz");
 
-	const TArray<float>& sx = GetMultiSampleParam("sx");
-	const TArray<float>& sy = GetMultiSampleParam("sy");
-	const TArray<float>& sz = GetMultiSampleParam("sz");
+	const TArray<float>& sx = GetOSCMultiSampleParam("sx");
+	const TArray<float>& sy = GetOSCMultiSampleParam("sy");
+	const TArray<float>& sz = GetOSCMultiSampleParam("sz");
 
-	const TArray<float>& vx = GetMultiSampleParam("vx");
-	const TArray<float>& vy = GetMultiSampleParam("vy");
-	const TArray<float>& vz = GetMultiSampleParam("vz");
+	const TArray<float>& vx = GetOSCMultiSampleParam("vx");
+	const TArray<float>& vy = GetOSCMultiSampleParam("vy");
+	const TArray<float>& vz = GetOSCMultiSampleParam("vz");
 
-	const TArray<float>& ltx = GetMultiSampleParam("ltx");
-	const TArray<float>& lty = GetMultiSampleParam("lty");
-	const TArray<float>& ltz = GetMultiSampleParam("ltz");
+	const TArray<float>& ltx = GetOSCMultiSampleParam("ltx");
+	const TArray<float>& lty = GetOSCMultiSampleParam("lty");
+	const TArray<float>& ltz = GetOSCMultiSampleParam("ltz");
 
-	const TArray<float>& lrx = GetMultiSampleParam("lrx");
-	const TArray<float>& lry = GetMultiSampleParam("lry");
-	const TArray<float>& lrz = GetMultiSampleParam("lrz");
+	const TArray<float>& lrx = GetOSCMultiSampleParam("lrx");
+	const TArray<float>& lry = GetOSCMultiSampleParam("lry");
+	const TArray<float>& lrz = GetOSCMultiSampleParam("lrz");
 
-	const TArray<float>& lsx = GetMultiSampleParam("lsx");
-	const TArray<float>& lsy = GetMultiSampleParam("lsy");
-	const TArray<float>& lsz = GetMultiSampleParam("lsz");
+	const TArray<float>& lsx = GetOSCMultiSampleParam("lsx");
+	const TArray<float>& lsy = GetOSCMultiSampleParam("lsy");
+	const TArray<float>& lsz = GetOSCMultiSampleParam("lsz");
 
 	TArray<TArray<float>> SrcCustomDataChannels;
 	for (int i = 0; i < InCustomDataChannels.Num(); i++)
 	{
-		const TArray<float>& a = GetMultiSampleParam(InCustomDataChannels[i]);
+		const TArray<float>& a = GetOSCMultiSampleParam(InCustomDataChannels[i]);
 		
 		if (a.Num() != MultiSampleNum)
 		{
@@ -175,17 +188,4 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 	}
 
 	InstancedStaticMesh->BatchUpdateInstancesData(0, MultiSampleNum, InstanceData.GetData(), true);
-}
-
-const TArray<float>& AOSCActor::GetMultiSampleParam(const FString& k)
-{
-	auto Iter = MultiSampleParams.Find(k);
-	if (!Iter)
-	{
-		static const TArray<float> a;
-		return a;
-	}
-
-	const auto& s = *Iter;
-	return s.Samples;
 }
