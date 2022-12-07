@@ -8,6 +8,15 @@ AOSCActor::AOSCActor()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
+void AOSCActor::BeginDestroy()
+{
+	UOSCActorSubsystem* S = GEngine->GetEngineSubsystem<UOSCActorSubsystem>();
+	if (S)
+		S->RemoveActorReference(this);
+
+	Super::BeginDestroy();
+}
+
 void AOSCActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);

@@ -46,6 +46,21 @@ void UOSCActorSubsystem::UpdateActorReference(AActor* Actor_)
 	}
 }
 
+void UOSCActorSubsystem::RemoveActorReference(AActor* Actor_)
+{
+	if (!IsValid(Actor_))
+		return;
+
+	if (AOSCCineCameraActor* Camera = Cast<AOSCCineCameraActor>(Actor_))
+	{
+		OSCCameraMap.Remove(Camera->ObjectName);
+	}
+	else if (AOSCActor* Actor = Cast<AOSCActor>(Actor_))
+	{
+		OSCActorMap.Remove(Actor->ObjectName);
+	}
+}
+
 void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FString& IPAddress, int32 Port)
 {
 	static const FMatrix ROT_YAW_90 = FRotationMatrix::Make(FRotator(0, 90, 0));
@@ -54,11 +69,19 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 	
 	auto Messages = UOSCManager::GetMessagesFromBundle(Bundle);
 
-	for (auto Iter : OSCActorMap)
+	TArray<FString> Keys;
+	OSCActorMap.GetKeys(Keys);
+	for (auto Key : Keys)
 	{
-		auto O = Iter.Value;
-		O->Params.Reset();
-		O->MultiSampleParams.Reset();
+		auto A = *OSCActorMap.Find(Key);
+		if (!IsValid(A))
+		{
+			OSCActorMap.Remove(Key);
+			continue;
+		}
+
+		A->Params.Reset();
+		A->MultiSampleParams.Reset();
 	}
 	
 	for (auto Message : Messages)
@@ -75,7 +98,7 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 				auto It = OSCActorMap.Find(Name);
 				if (!It)
 					continue;
-
+				
 				AOSCActor* Actor = *It;
 				if (!IsValid(Actor))
 					continue;
@@ -204,6 +227,9 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 	for (auto Iter : OSCActorMap)
 	{
 		auto O = Iter.Value;
+		if (!IsValid(O))
+			continue;
+		
 		int MultiSampleNum = 100000000;
 		
 		for (auto It : O->MultiSampleParams)

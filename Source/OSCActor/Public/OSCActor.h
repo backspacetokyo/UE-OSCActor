@@ -29,6 +29,8 @@ public:
 
 protected:
 
+	virtual void BeginDestroy() override;
+	
 	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
 	virtual void Tick(float DeltaSeconds) override;
 	

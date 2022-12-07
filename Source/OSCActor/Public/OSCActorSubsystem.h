@@ -33,13 +33,14 @@ public:
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
-	
+
 public:
 
 	UPROPERTY(Category = "OSCActor", EditAnywhere, BlueprintReadOnly)
 	int32 FrameNumber = 0;
 	
 	void UpdateActorReference(AActor* Actor_);
+	void RemoveActorReference(AActor* Actor_);
 
 protected:
 	
