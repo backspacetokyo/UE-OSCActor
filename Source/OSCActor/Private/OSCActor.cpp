@@ -164,7 +164,7 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 
 		if (hasDirection)
 		{
-			FQuat RR = FQuat::FindBetween(FVector(0, 0, 1), FVector(
+			FQuat RR = FQuat::FindBetweenNormals(FVector(0, 0, 1), FVector(
 				getSample(vx, i, 0),
 				getSample(vy, i, 0),
 				getSample(vz, i, 0))
