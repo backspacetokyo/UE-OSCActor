@@ -205,8 +205,13 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 					FilmbackSettings.SensorWidth = Value;
 					FilmbackSettings.SensorHeight = Value / Settings->SensorAspectRatio; 
 					FilmbackSettings.SensorAspectRatio = Settings->SensorAspectRatio; 
-					
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
 					Camera->GetCineCameraComponent()->SetFilmback(FilmbackSettings);
+#else
+					FilmbackSettings.SensorAspectRatio = FilmbackSettings.SensorWidth / FilmbackSettings.SensorHeight;
+					Camera->GetCineCameraComponent()->Filmback = FilmbackSettings;
+#endif
 				}
 			}
 			else if (Comp[0] == "sys")
