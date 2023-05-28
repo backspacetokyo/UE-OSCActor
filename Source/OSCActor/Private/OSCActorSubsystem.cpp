@@ -213,6 +213,18 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 					Camera->GetCineCameraComponent()->Filmback = FilmbackSettings;
 #endif
 				}
+				else if (Type == "winx")
+				{
+					float Value;
+					UOSCManager::GetFloat(Message, 0, Value);
+					Camera->GetOSCCineCameraComponent()->WindowXY.X = Value * 2;
+				}
+				else if (Type == "winy")
+				{
+					float Value;
+					UOSCManager::GetFloat(Message, 0, Value);
+					Camera->GetOSCCineCameraComponent()->WindowXY.Y = Value * 2;
+				}
 			}
 			else if (Comp[0] == "sys")
 			{
