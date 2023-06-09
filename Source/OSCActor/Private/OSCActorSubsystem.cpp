@@ -132,7 +132,7 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 					M = UOSCActorFunctionLibrary::ConvertGLtoUE4Matrix(M);
 					M = ROT_YAW_90 * M;
 					
-					Actor->SetActorTransform(FTransform(M));
+					Actor->SetActorRelativeTransform(FTransform(M));
 				}
 				else if (Type == "ss")
 				{
@@ -195,7 +195,7 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 
 					M = UOSCActorFunctionLibrary::ConvertGLtoUE4Matrix(M);
 
-					Camera->SetActorTransform(FTransform(M));
+					Camera->SetActorRelativeTransform(FTransform(M));
 				}
 				else if (Type == "focal")
 				{
