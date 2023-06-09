@@ -38,14 +38,14 @@ public:
 
 	UPROPERTY(Category = "OSCActor", EditAnywhere, BlueprintReadOnly)
 	int32 FrameNumber = 0;
-	
-	void UpdateActorReference(AActor* Actor_);
-	void RemoveActorReference(AActor* Actor_);
+
+	void UpdateActorReference(UActorComponent* Component_);
+	void RemoveActorReference(UActorComponent* Component_);
 
 protected:
-	
-	TMap<FString, AOSCActor*> OSCActorMap;
-	TMap<FString, AOSCCineCameraActor*> OSCCameraMap;
+
+	TMap<FString, UOSCActorComponent*> OSCActorComponentMap;
+	TMap<FString, UOSCCineCameraComponent*> OSCCameraComponentMap;
 
 	UPROPERTY()
 	class UOSCServer* OSCServer;

@@ -34,30 +34,27 @@ void UOSCActorSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UOSCActorSubsystem::UpdateActorReference(AActor* Actor_)
+void UOSCActorSubsystem::UpdateActorReference(UActorComponent* Component_)
 {
-	if (AOSCCineCameraActor* Camera = Cast<AOSCCineCameraActor>(Actor_))
+	if (UOSCActorComponent* Actor = Cast<UOSCActorComponent>(Component_))
 	{
-		OSCCameraMap.Add(Camera->ObjectName, Camera);
+		OSCActorComponentMap.Add(Actor->ObjectName, Actor);
 	}
-	else if (AOSCActor* Actor = Cast<AOSCActor>(Actor_))
+	else if (UOSCCineCameraComponent* Camera = Cast<UOSCCineCameraComponent>(Component_))
 	{
-		OSCActorMap.Add(Actor->ObjectName, Actor);
+		OSCCameraComponentMap.Add(Camera->ObjectName, Camera);
 	}
 }
 
-void UOSCActorSubsystem::RemoveActorReference(AActor* Actor_)
+void UOSCActorSubsystem::RemoveActorReference(UActorComponent* Component_)
 {
-	if (!IsValid(Actor_))
-		return;
-
-	if (AOSCCineCameraActor* Camera = Cast<AOSCCineCameraActor>(Actor_))
+	if (UOSCActorComponent* Actor = Cast<UOSCActorComponent>(Component_))
 	{
-		OSCCameraMap.Remove(Camera->ObjectName);
+		OSCActorComponentMap.Remove(Actor->ObjectName);
 	}
-	else if (AOSCActor* Actor = Cast<AOSCActor>(Actor_))
+	else if (UOSCCineCameraComponent* Camera = Cast<UOSCCineCameraComponent>(Component_))
 	{
-		OSCActorMap.Remove(Actor->ObjectName);
+		OSCCameraComponentMap.Remove(Camera->ObjectName);
 	}
 }
 
@@ -65,18 +62,19 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 {
 	static const FMatrix ROT_YAW_90 = FRotationMatrix::Make(FRotator(0, 90, 0));
 	
-	const UOSCActorSettings* Settings = GetDefault <UOSCActorSettings>();
+	const UOSCActorSettings* Settings = GetDefault<UOSCActorSettings>();
 	
 	auto Messages = UOSCManager::GetMessagesFromBundle(Bundle);
 
 	TArray<FString> Keys;
-	OSCActorMap.GetKeys(Keys);
+	OSCActorComponentMap.GetKeys(Keys);
+	
 	for (auto Key : Keys)
 	{
-		auto A = *OSCActorMap.Find(Key);
+		auto A = *OSCActorComponentMap.Find(Key);
 		if (!IsValid(A))
 		{
-			OSCActorMap.Remove(Key);
+			OSCActorComponentMap.Remove(Key);
 			continue;
 		}
 
@@ -95,11 +93,15 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 			
 			if (Comp[0] == "obj")
 			{
-				auto It = OSCActorMap.Find(Name);
+				auto It = OSCActorComponentMap.Find(Name);
 				if (!It)
 					continue;
-				
-				AOSCActor* Actor = *It;
+
+				UOSCActorComponent* Component = *It;
+				if (!IsValid(Component))
+					continue;
+
+				AActor* Actor = Component->GetOwner();
 				if (!IsValid(Actor))
 					continue;
 				
@@ -141,7 +143,7 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 
 					float v = OutValues.Last();
 					
-					Actor->Params.Add(ParName, v);
+					Component->Params.Add(ParName, v);
 				}
 				else if (Type == "ms")
 				{
@@ -150,16 +152,20 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 					FChannelData Data;
 					UOSCManager::GetAllFloats(Message, Data.Samples);
 
-					Actor->MultiSampleParams.Add(ParName, Data);
+					Component->MultiSampleParams.Add(ParName, Data);
 				}
 			}
 			else if (Comp[0] == "cam")
 			{
-				auto It = OSCCameraMap.Find(Name);
+				auto It = OSCCameraComponentMap.Find(Name);
 				if (!It)
 					continue;
 
-				AOSCCineCameraActor* Camera = *It;
+				UOSCCineCameraComponent* OSCCameraCompoent = *It;
+				if (!IsValid(OSCCameraCompoent))
+					continue;
+				
+				ACineCameraActor* Camera = Cast<ACineCameraActor>(OSCCameraCompoent->GetOwner());
 				if (!IsValid(Camera))
 					continue;
 
@@ -217,13 +223,13 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 				{
 					float Value;
 					UOSCManager::GetFloat(Message, 0, Value);
-					Camera->GetOSCCineCameraComponent()->WindowXY.X = Value * 2;
+					OSCCameraCompoent->WindowXY.X = Value * 2;
 				}
 				else if (Type == "winy")
 				{
 					float Value;
 					UOSCManager::GetFloat(Message, 0, Value);
-					Camera->GetOSCCineCameraComponent()->WindowXY.Y = Value * 2;
+					OSCCameraCompoent->WindowXY.Y = Value * 2;
 				}
 			}
 			else if (Comp[0] == "sys")
@@ -241,7 +247,7 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 	}
 
 	// Update MultiSampleNum to minimum amount of Samples
-	for (auto Iter : OSCActorMap)
+	for (auto Iter : OSCActorComponentMap)
 	{
 		auto O = Iter.Value;
 		if (!IsValid(O))
@@ -260,6 +266,11 @@ void UOSCActorSubsystem::OnOscBundleReceived(const FOSCBundle& Bundle, const FSt
 			MultiSampleNum = 0;
 
 		O->MultiSampleNum = MultiSampleNum;
-		O->UpdateFromOSC();
+
+		if (O->UpdateFromOSC.IsBound())
+		{
+			FEditorScriptExecutionGuard ScriptGuard;
+			O->UpdateFromOSC.Broadcast();
+		}
 	}
 }

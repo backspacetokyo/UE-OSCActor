@@ -3,12 +3,23 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "OSCActorSubsystem.h"
 
-AOSCActor::AOSCActor()
+static float getSample(const TArray<float>& c, int index, float default_value = 0)
 {
-	PrimaryActorTick.bCanEverTick = true;
+	if (c.Num() == 0) return default_value;
+	return c[index];
 }
 
-void AOSCActor::BeginDestroy()
+// ===================================================================================
+
+UOSCActorComponent::UOSCActorComponent()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
+	bTickInEditor = true;
+}
+
+void UOSCActorComponent::BeginDestroy()
 {
 	UOSCActorSubsystem* S = GEngine->GetEngineSubsystem<UOSCActorSubsystem>();
 	if (S)
@@ -17,14 +28,17 @@ void AOSCActor::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void AOSCActor::Tick(float DeltaSeconds)
+void UOSCActorComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
 {
-	Super::Tick(DeltaSeconds);
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
 	UOSCActorSubsystem* S = GEngine->GetEngineSubsystem<UOSCActorSubsystem>();
-	S->UpdateActorReference(this);
+	if (S)
+		S->UpdateActorReference(this);
 }
 
-float AOSCActor::GetOSCParam(const FString& Key, float DefaultValue)
+float UOSCActorComponent::GetOSCParam(const FString& Key, float DefaultValue)
 {
 	if (!Params.Contains(Key))
 		return DefaultValue;
@@ -32,7 +46,7 @@ float AOSCActor::GetOSCParam(const FString& Key, float DefaultValue)
 	return Params[Key];
 }
 
-const TArray<float>& AOSCActor::GetOSCMultiSampleParam(const FString& Key)
+const TArray<float>& UOSCActorComponent::GetOSCMultiSampleParam(const FString& Key)
 {
 	auto Iter = MultiSampleParams.Find(Key);
 	if (!Iter)
@@ -45,15 +59,10 @@ const TArray<float>& AOSCActor::GetOSCMultiSampleParam(const FString& Key)
 	return s.Samples;
 }
 
-static float getSample(const TArray<float>& c, int index, float default_value = 0)
+void UOSCActorComponent::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* InstancedStaticMesh,
+	TArray<FString> InCustomDataChannels)
 {
-	if (c.Num() == 0) return default_value;
-	return c[index];
-}
-
-void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* InstancedStaticMesh, TArray<FString> InCustomDataChannels)
-{
-	TArray<FInstancedStaticMeshInstanceData> InstanceData;
+TArray<FInstancedStaticMeshInstanceData> InstanceData;
 
 	const TArray<float>& tx = GetOSCMultiSampleParam("tx");
 	const TArray<float>& ty = GetOSCMultiSampleParam("ty");
@@ -202,4 +211,28 @@ void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* Instanc
 	}
 
 	InstancedStaticMesh->BatchUpdateInstancesData(0, MultiSampleNum, InstanceData.GetData(), true);
+}
+
+// ===================================================================================
+
+AOSCActor::AOSCActor(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+	, OSCActorComponent(CreateDefaultSubobject<UOSCActorComponent>(TEXT("OSCActorComponent")))
+{
+	PrimaryActorTick.bCanEverTick = true;
+}
+
+float AOSCActor::GetOSCParam(const FString& Key, float DefaultValue)
+{
+	return OSCActorComponent->GetOSCParam(Key, DefaultValue);
+}
+
+const TArray<float>& AOSCActor::GetOSCMultiSampleParam(const FString& Key)
+{
+	return OSCActorComponent->GetOSCMultiSampleParam(Key);
+}
+
+void AOSCActor::UpdateInstancedStaticMesh(UInstancedStaticMeshComponent* InstancedStaticMesh, TArray<FString> InCustomDataChannels)
+{
+	OSCActorComponent->UpdateInstancedStaticMesh(InstancedStaticMesh, InCustomDataChannels);
 }
