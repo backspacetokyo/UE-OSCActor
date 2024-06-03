@@ -46,9 +46,6 @@ public:
 
 	AOSCCineCameraActor(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OSCActor")
-	FString ObjectName;
-
 	UFUNCTION(BlueprintCallable, Category = "OSCActor")
 	void CopyCameraSettingToSceneCaptureComponent2D(USceneCaptureComponent2D* SceneCaptureComponent);
 
